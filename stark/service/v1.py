@@ -19,8 +19,36 @@ class StarkConfig(object) :
     def urls(self) :
         return self.get_urls()
 
+##############视图函数################
     def changelist_view(self,request,*args,**kwargs) :
-        return HttpResponse("列表")
+        head_list = []
+        new_data_list = []
+        data_list = self.model_class.objects.all()
+        if (self.list_display) :
+            for field_name in self.list_display:
+                if isinstance(field_name,str):
+                    # 根据类和字段名称，获取字段对象的verbose_name
+                    verbose_name = self.model_class._meta.get_field(field_name).verbose_name
+                else:
+                    verbose_name = field_name(self,is_header=True)
+                head_list.append(verbose_name)
+
+            # 处理表中的数据
+            for row in data_list:
+                temp = []
+                for field_name in self.list_display :
+                    if isinstance(field_name,str):
+                        val = getattr(row,field_name) # # 2 alex2
+                    else:
+                        val = field_name(self,row)
+                    temp.append(val)
+                new_data_list.append(temp)
+        else :
+            for data in data_list :
+                temp = []
+                temp.append(data)
+                new_data_list.append(temp)
+        return render(request,'changelist.html',{'data_list':new_data_list,'head_list':head_list})
     def add_view(self,request,*args,**kwargs) :
         return HttpResponse("添加")
     def delete_view(self,request,*args,**kwargs) :
@@ -46,7 +74,7 @@ class StarkSite() :
             curd_url = url(r'^%s/%s/' %(app_name,model_name,),(stark_config_obj.urls,None,None))
             url_pattern.append(curd_url)
         return url_pattern
-
+    
     @property
     def urls(self) :
         return (self.get_urls(),None,'stark')
